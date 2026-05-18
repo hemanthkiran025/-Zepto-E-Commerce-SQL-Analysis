@@ -1,231 +1,107 @@
-# -Zepto-E-Commerce-SQL-Analysis
-End-to-end SQL Server analysis on Zepto's grocery dataset — covering data cleaning, pricing, inventory, discount patterns, and revenue estimation using T-SQL.
-
-# -Topics 
-sql
-sql-server
-t-sql
-data-analysis
-data-cleaning
-e-commerce
-zepto
-portfolio-project
-business-intelligence
-
-## 📌 Project Overview
-
-This project performs a structured SQL-based analysis on Zepto's grocery and FMCG product dataset. The goal is to extract actionable business insights around pricing strategy, inventory gaps, discount patterns, and revenue estimation — mimicking the kind of queries a data analyst would run at a quick-commerce company.
-
-**Tools used:** Microsoft SQL Server · T-SQL · SSMS
+# Zepto E-Commerce SQL Analysis
 ---
-## 📂 Dataset Description
 
-| Column | Description |
+## Overview
+
+This project delivers an end-to-end SQL-based analysis of Zepto's grocery and FMCG product catalog using **Microsoft SQL Server (T-SQL)**. It covers the full data workflow — from raw data exploration and cleaning to structured business analysis — answering eight key business questions around pricing, inventory, discounts, and revenue estimation.
+
+The approach mirrors real-world data analyst workflows in a quick-commerce environment, demonstrating practical SQL skills applicable to product, operations, and business intelligence teams.
+
+---
+
+## Objectives
+
+- Explore and understand the structure and quality of the raw dataset
+- Clean and standardise data for accurate analysis
+- Answer targeted business questions using optimised T-SQL queries
+- Surface actionable insights across pricing, inventory, and revenue dimensions
+
+---
+
+## Tools & Technologies
+
+| Tool | Purpose |
 |---|---|
-| `name` | Product name |
-| `Category` | Product category |
-| `mrp` | Maximum Retail Price (stored in paise, converted to ₹) |
-| `discountedSellingPrice` | Selling price after discount (paise → ₹) |
-| `discountPercent` | Discount percentage |
-| `outOfStock` | 1 = Out of stock, 0 = Available |
-| `availableQuantity` | Units available in inventory |
-| `weightInGms` | Product weight in grams |
-
-> **Note:** Prices were originally stored in paise (1 ₹ = 100 paise). A data cleaning step converts them to rupees.
----
-## 🧹 Data Cleaning
-
-Before analysis, the following cleaning steps were performed:
-
-### 1. Identify and remove zero-price records
-```sql
--- Inspect zero-price products
-SELECT * FROM zepto.dbo.zepto
-WHERE mrp = 0 OR discountedSellingPrice = 0;
-
--- Remove invalid records
-DELETE FROM zepto.dbo.zepto
-WHERE mrp = 0;
-```
-
-### 2. Convert prices from paise to rupees
-```sql
-UPDATE zepto.dbo.zepto
-SET mrp = mrp / 100.0,
-    discountedSellingPrice = discountedSellingPrice / 100.0;
-```
+| Microsoft SQL Server | Relational database engine |
+| T-SQL | Query language for data manipulation and analysis |
+| SSMS | Query execution, testing, and result inspection |
 
 ---
 
-## 🔍 Exploratory Data Analysis
+## Dataset Description
 
-```sql
--- Preview data
-SELECT * FROM zepto.dbo.zepto;
-
--- Total row count
-SELECT COUNT(*) FROM zepto.dbo.zepto;
-
--- Distinct product categories
-SELECT DISTINCT Category FROM zepto.dbo.zepto ORDER BY Category;
-
--- Stock availability breakdown
-SELECT outOfStock, COUNT(*) AS stock_count
-FROM zepto.dbo.zepto
-GROUP BY outOfStock;
-
--- Products listed under multiple SKUs
-SELECT name, COUNT(*) AS "number of skus"
-FROM zepto.dbo.zepto
-GROUP BY name
-HAVING COUNT(*) > 1
-ORDER BY COUNT(*) DESC;
-```
+| Column | Data Type | Description |
+|---|---|---|
+| `name` | VARCHAR | Product name |
+| `Category` | VARCHAR | Product category |
+| `mrp` | FLOAT | Maximum Retail Price (originally in paise, converted to ₹) |
+| `discountedSellingPrice` | FLOAT | Final selling price after discount (paise → ₹) |
+| `discountPercent` | FLOAT | Discount percentage applied |
+| `outOfStock` | BIT | 1 = Out of stock · 0 = Available |
+| `availableQuantity` | INT | Units currently in inventory |
+| `weightInGms` | FLOAT | Product weight in grams |
 
 ---
 
-## 📊 Business Analysis Queries
+## Data Cleaning
 
-### Q1 — Top 10 Best-Value Products by Discount
-```sql
-SELECT DISTINCT TOP 10 name, mrp, discountPercent
-FROM zepto.dbo.zepto
-ORDER BY discountPercent DESC;
-```
-**Insight:** Identifies products where customers get maximum savings — useful for marketing and promotions.
+Before analysis, the following cleaning steps were applied to ensure data integrity:
 
----
-
-### Q2 — High MRP Products Currently Out of Stock
-```sql
-SELECT DISTINCT name, mrp
-FROM zepto.dbo.zepto
-WHERE outOfStock = 1 AND mrp > 300
-ORDER BY mrp DESC;
-```
-**Insight:** Premium products that are unavailable represent direct lost revenue. These are priority restocking candidates.
+| Step | Action | Reason |
+|---|---|---|
+| Remove zero-price records | Deleted rows where MRP = 0 | Invalid / incomplete product entries |
+| Convert paise to rupees | Divided MRP and selling price by 100 | Raw data stored in paise, not rupees |
 
 ---
 
-### Q3 — Estimated Revenue by Category
-```sql
-SELECT Category,
-       SUM(discountedSellingPrice * availableQuantity) AS total_revenue
-FROM zepto.dbo.zepto
-GROUP BY Category
-ORDER BY total_revenue DESC;
-```
-**Insight:** Quantifies which category contributes most to top-line revenue. Fruits & Vegetables typically lead due to high volume.
+## Business Questions Answered
+
+| # | Question | Insight |
+|---|---|---|
+| Q1 | Top 10 best-value products by discount | Identifies products offering maximum savings for promotional targeting |
+| Q2 | High MRP products currently out of stock | Highlights premium unmet demand and priority restocking candidates |
+| Q3 | Estimated revenue by category | Quantifies financial contribution per category for procurement decisions |
+| Q4 | Premium products with low discount | Surfaces high-ticket items ideal for promotional campaigns |
+| Q5 | Top 5 categories by average discount | Reveals which categories compete most aggressively on price |
+| Q6 | Price per gram for products ≥ 100g | Normalises price across pack sizes to surface true unit-economy value |
+| Q7 | Product weight segmentation (Low / Medium / Bulk) | Segments products for logistics planning and packaging strategy |
+| Q8 | Total inventory weight per category | Measures physical inventory load for warehouse and cold-chain planning |
 
 ---
 
-### Q4 — Premium Products with Low Discount
-```sql
-SELECT DISTINCT name, mrp, discountPercent
-FROM zepto.dbo.zepto
-WHERE mrp > 500 AND discountPercent < 10
-ORDER BY mrp DESC, discountPercent DESC;
-```
-**Insight:** High-ticket items with minimal markdowns — ideal targets for promotional campaigns to drive conversion.
-
----
-
-### Q5 — Top 5 Categories by Average Discount
-```sql
-SELECT TOP 5 Category,
-       ROUND(AVG(CAST(discountPercent AS FLOAT)), 2) AS avg_discount
-FROM zepto.dbo.zepto
-GROUP BY Category
-ORDER BY avg_discount DESC;
-```
-**Insight:** Non-food categories like Baby Care and Household Supplies often offer deeper discounts to drive trial.
-
----
-
-### Q6 — Price per Gram (Best Value for Large Packs)
-```sql
-SELECT DISTINCT name, weightInGms, discountedSellingPrice,
-       ROUND(discountedSellingPrice / weightInGms, 2) AS price_per_gram
-FROM zepto.dbo.zepto
-WHERE weightInGms >= 100
-ORDER BY price_per_gram;
-```
-**Insight:** Normalises price across pack sizes. Reveals which products offer true unit-economy value.
-
----
-
-### Q7 — Product Weight Segmentation
-```sql
-SELECT DISTINCT name, weightInGms,
-    CASE
-        WHEN weightInGms < 1000 THEN 'Low'
-        WHEN weightInGms < 5000 THEN 'Medium'
-        ELSE 'Bulk'
-    END AS weight_category
-FROM zepto.dbo.zepto;
-```
-**Insight:** Segments products for logistics planning, packaging strategy, and customer targeting (household vs. individual).
-
----
-
-### Q8 — Total Inventory Weight per Category
-```sql
-SELECT Category,
-       SUM(weightInGms * availableQuantity) AS total_weight
-FROM zepto.dbo.zepto
-GROUP BY Category
-ORDER BY total_weight DESC;
-```
-**Insight:** Calculates physical inventory load by category — critical for warehouse capacity and cold-chain management.
-
----
-
-## 💡 Key Findings
+## Key Findings
 
 | # | Finding |
 |---|---|
 | 1 | ~21% of all products are currently out of stock |
 | 2 | Baby Care and Household categories offer the deepest average discounts |
-| 3 | Many premium products (MRP > ₹500) carry less than 10% discount — room for promotions |
-| 4 | Fruits & Vegetables drive the highest estimated revenue |
-| 5 | Price per gram varies up to 5× across different pack sizes in the same category |
-| 6 | Several product names appear under 10+ SKUs (size/flavour variants) |
-| 7 | Bulk category dominates total inventory weight, influencing logistics strategy |
+| 3 | Premium products (MRP > ₹500) carry less than 10% discount — significant room for promotions |
+| 4 | Fruits & Vegetables drive the highest estimated category revenue |
+| 5 | Price per gram varies up to 5× across different pack sizes within the same category |
+| 6 | Several product names appear under 10+ SKUs due to size and flavour variants |
+| 7 | Bulk products dominate total inventory weight, with direct implications for logistics |
 
 ---
 
-## 🚀 How to Run
+## Repository Structure
 
-
-1. **Set up the database**  
-   Import the dataset into SQL Server as `zepto.dbo.zepto` (CSV import via SSMS or `BULK INSERT`).
-
-2. **Run the scripts in order**
-   - `01_exploration.sql` — initial data exploration
-   - `02_cleaning.sql` — data cleaning (remove zeros, convert paise to ₹)
-   - `03_analysis.sql` — all 8 business queries
-
-3. **Open in SSMS** and execute each script against your `zepto` database.
+```
+Zepto-E-Commerce-SQL-Analysis/
+│
+├── zepto_analysis.sql        ← All queries: exploration, cleaning, and analysis
+├── README.md                 ← Project documentation
+└── dataset/
+    └── zepto_dataset.csv     ← Raw dataset
+```
 
 ---
 
-## 📁 Repository Structure
+## How to Run
 
-```
-zepto-sql-analysis/
-│
-├── data/
-│   └── zepto_dataset.csv         # Raw dataset
-│
-├── scripts/
-│   ├── 01_exploration.sql        # EDA queries
-│   ├── 02_cleaning.sql           # Data cleaning
-│   └── 03_analysis.sql           # Business queries (Q1–Q8)
-│
-├── visuals/
-│   └── charts/                   # Revenue, discount, stock charts
-│
-└── README.md
-```
+1. Import `zepto_dataset.csv` into SQL Server as `zepto.dbo.zepto`
+2. Open `zepto_analysis.sql` in SSMS
+3. Execute section by section — **Exploration → Cleaning → Analysis**
 
-*Dataset sourced from public Zepto product listings. Used for educational purposes only.*
+---
+
+*Dataset sourced from public Zepto product listings. Used for educational and portfolio purposes only.*
